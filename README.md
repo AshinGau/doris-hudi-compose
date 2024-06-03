@@ -126,8 +126,59 @@ doris> explain select * from customer_mor where c_custkey = 64 and c_nationkey =
 |      hudiNativeReadSplits=3/4                                  |
 ```
 
+## TimeTravel
+See the commit metadata in spark-sql:
+```
+spark-sql> call show_commits(table => 'customer_cow', limit => 10);
+20240603033556094	20240603033558249	commit	448833	0	1	1	183	0	0
+20240603015444737	20240603015446588	commit	450238	0	1	1	202	1	0
+20240603015018572	20240603015020503	commit	436692	1	0	1	1	0	0
+20240603013858098	20240603013907467	commit	44902033	100	0	25	18751	0	0
 
+spark-sql> call show_commits(table => 'customer_mor', limit => 10);
+20240603033745977	20240603033748021	deltacommit	1240	0	1	1	0	0	0
+20240603015451860	20240603015453539	deltacommit	1434	0	1	1	1	1	0
+20240603015058442	20240603015100120	deltacommit	436691	1	0	1	1	0	0
+20240603013918515	20240603013922961	deltacommit	44904040	100	0	25	18751	0	0
+```
+Let's travel to the commit we insert `c_custkey=100` in doris where `c_custkey=32` is not updated:
+```
+doris> select * from customer_cow for time as of '20240603015018572' where c_custkey = 32 or c_custkey = 100;
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+| c_custkey | c_name             | c_address                             | c_phone         | c_acctbal | c_mktsegment | c_comment                                        | c_nationkey |
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+|        32 | Customer#000000032 | jD2xZzi UmId,DCtNBLXKj9q0Tlp2iQ6ZcO3J | 25-430-914-2194 |   3471.53 | BUILDING     | cial ideas. final, furious requests across the e |          15 |
+|       100 | Customer#000000100 | jD2xZzi                               | 25-430-914-2194 |   3471.59 | BUILDING     | cial ideas. final, furious requests              |          25 |
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+-- compare with spark-sql
+spark-sql> select * from customer_mor timestamp as of '20240603015018572' where c_custkey = 32 or c_custkey = 100;
 
+doris> select * from customer_mor for time as of '20240603015058442' where c_custkey = 32 or c_custkey = 100;
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+| c_custkey | c_name             | c_address                             | c_phone         | c_acctbal | c_mktsegment | c_comment                                        | c_nationkey |
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+|       100 | Customer#000000100 | jD2xZzi                               | 25-430-914-2194 |   3471.59 | BUILDING     | cial ideas. final, furious requests              |          25 |
+|        32 | Customer#000000032 | jD2xZzi UmId,DCtNBLXKj9q0Tlp2iQ6ZcO3J | 25-430-914-2194 |   3471.53 | BUILDING     | cial ideas. final, furious requests across the e |          15 |
++-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
+spark-sql> select * from customer_mor timestamp as of '20240603015058442' where c_custkey = 32 or c_custkey = 100;
+```
 
+## Incremental Read
+Seed the data changed between after inserting `c_custkey=100`
+```
+doris> select * from customer_cow@incr('beginTime'='20240603015018572');
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+| c_custkey | c_name                    | c_address | c_phone         | c_acctbal | c_mktsegment | c_comment                           | c_nationkey |
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+|        32 | Customer#000000032_update | jD2xZzi   | 25-430-914-2194 |   3471.59 | BUILDING     | cial ideas. final, furious requests |          15 |
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+spark-sql> select * from hudi_table_changes('customer_cow', 'latest_state', '20240603015018572');
 
-
+doris> select * from customer_mor@incr('beginTime'='20240603015058442');
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+| c_custkey | c_name                    | c_address | c_phone         | c_acctbal | c_mktsegment | c_comment                           | c_nationkey |
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+|        32 | Customer#000000032_update | jD2xZzi   | 25-430-914-2194 |   3471.59 | BUILDING     | cial ideas. final, furious requests |          15 |
++-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
+spark-sql> select * from hudi_table_changes('customer_mor', 'latest_state', '20240603015058442');
+```
