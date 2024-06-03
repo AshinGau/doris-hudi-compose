@@ -56,18 +56,18 @@ spark-sql> insert into customer_cow values (100, "Customer#000000100", "jD2xZzi"
 spark-sql> insert into customer_mor values (100, "Customer#000000100", "jD2xZzi", "25-430-914-2194", 3471.59, "BUILDING", "cial ideas. final, furious requests", 25);
 ```
 `c_nationkey=25` is a new partition, doris can query the new data at once without refresh:
-```
+```sql
 doris> use hive.default;
 doris> select * from customer_cow where c_custkey = 100;
 doris> select * from customer_mor where c_custkey = 100;
 ```
 Insert a record with `c_custkey=32`(primary key, already in table) will remove the old record:
-```
+```sql
 spark-sql> insert into customer_cow values (32, "Customer#000000032_update", "jD2xZzi", "25-430-914-2194", 3471.59, "BUILDING", "cial ideas. final, furious requests", 15);
 spark-sql> insert into customer_mor values (32, "Customer#000000032_update", "jD2xZzi", "25-430-914-2194", 3471.59, "BUILDING", "cial ideas. final, furious requests", 15);
 ```
 Query the updated data at once in doris:
-```
+```sql
 doris> select * from customer_cow where c_custkey = 32;
 +-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
 | c_custkey | c_name                    | c_address | c_phone         | c_acctbal | c_mktsegment | c_comment                           | c_nationkey |
@@ -128,7 +128,7 @@ doris> explain select * from customer_mor where c_custkey = 64 and c_nationkey =
 
 ## TimeTravel
 See the commit metadata in spark-sql:
-```
+```sql
 spark-sql> call show_commits(table => 'customer_cow', limit => 10);
 20240603033556094	20240603033558249	commit	448833	0	1	1	183	0	0
 20240603015444737	20240603015446588	commit	450238	0	1	1	202	1	0
@@ -142,7 +142,7 @@ spark-sql> call show_commits(table => 'customer_mor', limit => 10);
 20240603013918515	20240603013922961	deltacommit	44904040	100	0	25	18751	0	0
 ```
 Let's travel to the commit we insert `c_custkey=100` in doris where `c_custkey=32` is not updated:
-```
+```sql
 doris> select * from customer_cow for time as of '20240603015018572' where c_custkey = 32 or c_custkey = 100;
 +-----------+--------------------+---------------------------------------+-----------------+-----------+--------------+--------------------------------------------------+-------------+
 | c_custkey | c_name             | c_address                             | c_phone         | c_acctbal | c_mktsegment | c_comment                                        | c_nationkey |
@@ -165,7 +165,7 @@ spark-sql> select * from customer_mor timestamp as of '20240603015058442' where 
 
 ## Incremental Read
 Seed the data changed between after inserting `c_custkey=100`
-```
+```sql
 doris> select * from customer_cow@incr('beginTime'='20240603015018572');
 +-----------+---------------------------+-----------+-----------------+-----------+--------------+-------------------------------------+-------------+
 | c_custkey | c_name                    | c_address | c_phone         | c_acctbal | c_mktsegment | c_comment                           | c_nationkey |
