@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # hotfix version by GaoXin
-DORIS_PACKAGE=doris-hudi-master
+DORIS_PACKAGE=doris-hudi-2.1
 DORIS_DOWNLOAD_URL=justtmp-bj-1308700295.cos.ap-beijing.myqcloud.com/gaoxin
 
 # DORIS_PACKAGE=apache-doris-2.1.3-bin-x64
@@ -13,7 +13,7 @@ md5_hadoop_aws="a3e19d42cadd1a6862a41fd276f94382"
 md5_hudi_bundle="a9cb8c752d1d7132ef3cfe3ead78a30d"
 md5_jdk17="0930efa680ac61e833699ccc36bfc739"
 md5_spark="b393d314ffbc03facdc85575197c5db9"
-md5_doris="39e5efbf1695aa12baf9fae4b12ff767"
+md5_doris="7991e1fa85a68d6243ebcce984cd43a7"
 
 
 download_source_file() {

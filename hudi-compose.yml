@@ -50,7 +50,6 @@ services:
     container_name: doris-hudi-env
     image: 'apache/hadoop:3.3.6'
     environment:
-      JAVA_HOME: /opt/jdk-17.0.2
       LD_LIBRARY_PATH: /opt/doris/be/lib
     ports:
       - '${DORIS_QUERY_PORT}:9030'
