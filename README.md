@@ -2,8 +2,12 @@
 Launch spark/doris/hive/hudi/minio test environments, and give examples to query hudi in Doris.
 
 ## Launch Docker Compose
+**Create Network**
+```shell
+sudo docker network create -d bridge hudi-net
+```
 **Launch all components in docker**
-``` shell
+```shell
 sudo ./start-hudi-compose.sh
 ```
 **Login into Spark**
@@ -17,7 +21,7 @@ sudo ./login-doris.sh
 
 ## Prepare Hudi Data
 There's already a hive table named `customer` in hive default. Create a hudi table from the hive table:
-``` sql
+```sql
 -- ./login-spark.sh
 use default;
 
